@@ -93,6 +93,22 @@
         .contacts { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; font-size: 0.9em; color: #555; }
         .contact-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #f9f9f9; padding: 8px 10px; border-radius: 4px; }
         .contact-info { flex: 1; }
+        .contact-info input { 
+            border: 1px solid transparent; 
+            background: transparent;
+            padding: 2px 4px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .contact-info input:hover {
+            background: rgba(255,255,255,0.5);
+            border-color: #e0e0e0;
+        }
+        .contact-info input:focus {
+            background: white;
+            border-color: var(--blue);
+            outline: none;
+        }
         .contact-name { font-weight: 600; color: #333; }
         .contact-role { font-size: 0.85em; color: #777; }
         
@@ -361,7 +377,7 @@
                     
                     let contactsHtml = (p.contacts || []).map((c, ci) => {
                         let emailAction = c.email 
-                            ? `<a href="${gmailComposeUrl(c.email, 'Re: ' + p.title)}" target="_blank" class="email-btn">✉️ Gmail</a>` 
+                            ? `<a href="${gmailComposeUrl(c.email, 'Re: ' + p.title)}" target="_blank" rel="noopener noreferrer" class="email-btn">✉️ Gmail</a>` 
                             : `<span class="no-email">Add email ↓</span>`;
                         
                         const isFirst = ci === 0;
@@ -369,8 +385,12 @@
                             
                         return `<div class="contact-row">
                                     <div class="contact-info">
-                                        <div class="contact-name">${c.name}</div>
-                                        <div class="contact-role">${c.role || ''}</div>
+                                        <input type="text" placeholder="Contact name" value="${c.name || ''}" 
+                                            onchange="updateContactField('activePipeline', ${i}, ${ci}, 'name', this.value)"
+                                            style="font-weight: 600; color: #333; border: none; background: transparent; padding: 2px; width: 100%;">
+                                        <input type="text" placeholder="Role/Title" value="${c.role || ''}" 
+                                            onchange="updateContactField('activePipeline', ${i}, ${ci}, 'role', this.value)"
+                                            style="font-size: 0.85em; color: #777; border: none; background: transparent; padding: 2px; width: 100%;">
                                     </div>
                                     <div class="contact-actions">
                                         <button class="move-btn" onclick="moveContact('activePipeline', ${i}, ${ci}, -1)" ${isFirst ? 'disabled' : ''} title="Move up">↑</button>
@@ -443,7 +463,7 @@
                     card.className = `card type-${isPersonal ? 'Personal' : 'Professional'}${n.archived ? ' archived' : ''}`;
 
                     let emailAction = n.email 
-                        ? `<a href="${gmailComposeUrl(n.email)}" target="_blank" class="network-email-btn">✉️ Open Gmail</a>` 
+                        ? `<a href="${gmailComposeUrl(n.email)}" target="_blank" rel="noopener noreferrer" class="network-email-btn">✉️ Open Gmail</a>` 
                         : ``;
 
                     card.innerHTML = `
@@ -591,8 +611,10 @@
         // Initialize on page load
         window.addEventListener('DOMContentLoaded', () => {
             if (!loadFromStorage()) {
-                // If no saved data, show welcome message
-                console.log('No saved data found. Starting fresh.');
+                // If no saved data, load the initial backup data
+                db = {"activePipeline":[{"title":"Culture Planning","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":""},"nextAction":"","contacts":[]},{"title":"Museums 101 2nd edition","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":"$1000 per year"},"nextAction":"Email, Publisher, and Keith ","contacts":[{"name":"Publisher","role":"","email":"","notes":""},{"name":"Keith","role":"","email":"","notes":""},{"name":"Photo Editor","role":"","email":"","notes":""}]},{"title":"City of McDonough Museum (Next Steps)","client":"City of McDonough","status":"Lead / Follow-up Required","probability":"High (80%)","financials":{"value":"$7500 60 hours ($125 per hour, including travel)"},"nextAction":"Await next steps","internalNotes":"High probability due to 10-year relationship, but client can be difficult.","contacts":[{"name":"Kam Varner","role":"Mayor-Elect","email":"kvarner@mcdonoughga.org","notes":"Sent email January 14th, await next steps."},{"name":"Christy L. Taylor","role":"City Clerk","email":"ctaylor@mcdonoughga.org"}]},{"title":"Cambodia Science and Technology Centre","client":"MoEYS / ADB","status":"Interviewed / Pending Decision","probability":"Medium-High (60%)","financials":{"value":"$90,000"},"nextAction":"Await decision (expected Jan)","contacts":[{"name":"Tim Sandan","role":"Procurement","email":"timsandan@gmail.com","notes":"Sent follow up January 14th"},{"name":"Daavid Vaananen","role":"Recruiter","email":"daavid.vaananen@pm.me","notes":"Sent email wishing Happy New Year"}]},{"title":"Hawaiâ€˜i State Archives Revenue Study","client":"Architects Hawaii Ltd.","status":"Proposal Submitted / Pending Decision","probability":"Medium (40%)","financials":{"value":"$97,500"},"nextAction":"Await next steps","contacts":[{"name":"Katie Stephens","role":"AHL Contact","email":"kstephens@ahl.design","notes":"Happy New Year email sent January 14th 2026"},{"name":"Michele F. Pacifico","role":"Consultant","email":"martinpacifico@comcast.net"}]},{"title":"Juneteenth Home Initiative","client":"Galveston Historical Foundation","status":"SoQ Submitted / Pending Decision","probability":"Medium-Low (30%)","financials":{"value":"110k - 130k"},"nextAction":"Await SoQ review (mid-Jan)","contacts":[{"name":"Will Wright","role":"Chief Creative Officer","email":"will.wright@galvestonhistory.org","notes":"Sent Happy New Year and follow up email January 14, 2026"},{"name":"W. Dwayne Jones","role":"Exec Director","email":"dwayne.jones@galvestonhistory.org"},{"name":"Denise Alexander","role":"","email":"denise.alexander@galvestonhistory.org","notes":""}]},{"title":"Historic New Orleans Collection","client":"The Historic New Orleans Collection (HNOC)","status":"Proposal Submitted / Pending Decision","probability":"Low-Medium (25%)","financials":{"value":"$95,000"},"nextAction":"Submit Proposal by Feb 20","contacts":[{"name":"Michael Cohn","role":"COO/CFO","email":"michael.cohn@hnoc.org","notes":"Phone call January 12th 2026, Sent revised proposal January 13th 2026. Contact February 1st 2026"},{"name":"Paige Nulty","role":"Admin Assistant","email":"paige.nulty@hnoc.org"}]},{"title":"Cranbrook Institute of Science","client":"Cranbrook","status":"Declined / No Response","probability":"Zero","financials":{"value":"96,200"},"nextAction":"Add to email list","contacts":[{"name":"Lucy Hale","role":"Director","email":"LHale@cranbrook.edu","notes":"Sent Happy New Year!, January 14th 2026"},{"name":"Missy Coulter","role":"","email":"purchasing@cranbrook.edu","notes":"November 13th sent proposal (7 days after mothers death), Nov 19, 2025 received rejection email, new director, overwhelmed,  "}]},{"title":"Boston Civic & Cultural Framework","client":"City of Boston","status":"Declined / Keep in Touch","probability":"Zero","financials":{"value":"250,000"},"nextAction":"None (Declined)","contacts":[{"name":"Raisa Saniat","role":"RFP Coordinator","email":"raisa.saniat@boston.gov","notes":"Send Happy New Year Friday January 16th "},{"name":"Samuel Fidler","role":"","email":"samuel.fidler@boston.gov","notes":""}]}],"network":[]};
+                render();
+                autoSave(); // Save the initial data
             }
         });
     </script>
