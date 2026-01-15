@@ -246,7 +246,6 @@ A: Download your backup, then replace the old HTML file with the new one. Import
 
 For questions or support:
 - Open an issue on GitHub
-- Email: [Your email if you want to include it]
 
 ---
 
