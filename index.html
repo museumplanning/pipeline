@@ -45,6 +45,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .save-status {
@@ -85,6 +86,15 @@
 
         .btn-secondary:hover {
             background: #cbd5e0;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
         }
 
         .dashboard {
@@ -262,21 +272,66 @@
         .contact-name {
             font-weight: 600;
             color: #2d3748;
+            margin-bottom: 3px;
         }
 
-        .edit-btn {
+        .contact-email {
+            color: #4299e1;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+
+        .contact-email:hover {
+            text-decoration: underline;
+        }
+
+        .email-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .contact-notes {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
             padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
             background: #667eea;
             color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 10px;
         }
 
-        .edit-btn:hover {
+        .btn-edit:hover {
             background: #5568d3;
+        }
+
+        .btn-email-all {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-email-all:hover {
+            background: #38a169;
         }
 
         .modal {
@@ -376,10 +431,45 @@
             border-color: #667eea;
         }
 
+        .file-input-wrapper {
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .header-actions {
+                width: 100%;
             }
 
             .stats-grid {
@@ -403,12 +493,20 @@
 </head>
 <body>
     <div class="container">
+        <div class="alert" id="alertBox"></div>
+
         <div class="header">
             <h1>Museum Planning Pipeline</h1>
             <div class="header-actions">
                 <div class="save-status" id="saveStatus">
                     <span>●</span>
                     <span id="saveText">Auto-saved</span>
+                </div>
+                <div class="file-input-wrapper">
+                    <button class="btn btn-success" onclick="document.getElementById('fileInput').click()">
+                        Import Backup
+                    </button>
+                    <input type="file" id="fileInput" accept=".json" onchange="importBackup(event)">
                 </div>
                 <button class="btn btn-secondary" onclick="downloadBackup()">Download Backup</button>
                 <button class="btn btn-primary" onclick="openAddModal()">+ Add Project</button>
@@ -534,21 +632,8 @@
             if (saved) {
                 pipelineData = JSON.parse(saved);
             } else {
-                // Import initial data
-                pipelineData = {
-                    "activePipeline": [
-                        {"title": "Culture Planning", "client": "", "status": "Lead / Follow-up Required", "probability": "Medium (40%)", "financials": {"value": ""}, "nextAction": "", "contacts": []},
-                        {"title": "Museums 101 2nd edition", "client": "", "status": "Lead / Follow-up Required", "probability": "Medium (40%)", "financials": {"value": "$1000 per year"}, "nextAction": "Email, Publisher, and Keith ", "contacts": [{"name": "Publisher", "role": "", "email": "", "notes": ""}, {"name": "Keith", "role": "", "email": "", "notes": ""}, {"name": "Photo Editor", "role": "", "email": "", "notes": ""}]},
-                        {"title": "City of McDonough Museum (Next Steps)", "client": "City of McDonough", "status": "Lead / Follow-up Required", "probability": "High (80%)", "financials": {"value": "$7500 60 hours ($125 per hour, including travel)"}, "nextAction": "Email Mayor Varner & Clerk Taylor mid-Jan", "internalNotes": "High probability due to 10-year relationship, but client can be difficult.", "contacts": [{"name": "Kam Varner", "role": "Mayor-Elect", "email": "kvarner@mcdonoughga.org"}, {"name": "Christy L. Taylor", "role": "City Clerk", "email": "ctaylor@mcdonoughga.org"}]},
-                        {"title": "Cambodia Science and Technology Centre", "client": "MoEYS / ADB", "status": "Interviewed / Pending Decision", "probability": "Medium-High (60%)", "financials": {"value": "$90,000"}, "nextAction": "Await decision (expected Jan)", "contacts": [{"name": "Tim Sandan", "role": "Procurement"}, {"name": "Daavid Vaananen", "role": "Recruiter"}]},
-                        {"title": "Hawaiâ€˜i State Archives Revenue Study", "client": "Architects Hawaii Ltd.", "status": "Proposal Submitted / Pending Decision", "probability": "Medium (40%)", "financials": {"value": "$97,500"}, "nextAction": "Send follow-up to Katie Stephens Jan 13", "contacts": [{"name": "Katie Stephens", "role": "AHL Contact"}, {"name": "Michele F. Pacifico", "role": "Consultant"}]},
-                        {"title": "Juneteenth Home Initiative", "client": "Galveston Historical Foundation", "status": "SoQ Submitted / Pending Decision", "probability": "Medium-Low (30%)", "financials": {"value": "110k - 130k"}, "nextAction": "Await SoQ review (mid-Jan)", "contacts": [{"name": "Will Wright", "role": "Chief Creative Officer"}, {"name": "W. Dwayne Jones", "role": "Exec Director"}]},
-                        {"title": "Historic New Orleans Collection", "client": "The Historic New Orleans Collection (HNOC)", "status": "Proposal Submitted / Pending Decision", "probability": "Low-Medium (25%)", "financials": {"value": "$95,000"}, "nextAction": "Submit Proposal by Feb 20", "contacts": [{"name": "Michael Cohn", "role": "COO/CFO", "email": "michael.cohn@hnoc.org", "notes": "Phone call January 12th 2026, Sent revised proposal January 13th 2026. Contact February 1st 2026"}, {"name": "Paige Nulty", "role": "Admin Assistant", "email": "paige.nulty@hnoc.org"}]},
-                        {"title": "Cranbrook Institute of Science", "client": "Cranbrook", "status": "Declined / No Response", "probability": "Low (5%)", "financials": {"value": "96,200"}, "nextAction": "None (Likely lost)", "contacts": [{"name": "Lucy Hale", "role": "Director"}]},
-                        {"title": "Boston Civic & Cultural Framework", "client": "City of Boston", "status": "Declined / Keep in Touch", "probability": "Zero", "financials": {"value": "250,000"}, "nextAction": "None (Declined)", "contacts": [{"name": "Raisa Saniat", "role": "RFP Coordinator"}]}
-                    ],
-                    "network": []
-                };
+                // Import initial data from your backup
+                pipelineData = {"activePipeline":[{"title":"Culture Planning","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":""},"nextAction":"","contacts":[]},{"title":"Museums 101 2nd edition","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":"$1000 per year"},"nextAction":"Email, Publisher, and Keith ","contacts":[{"name":"Publisher","role":"","email":"","notes":""},{"name":"Keith","role":"","email":"","notes":""},{"name":"Photo Editor","role":"","email":"","notes":""}]},{"title":"City of McDonough Museum (Next Steps)","client":"City of McDonough","status":"Lead / Follow-up Required","probability":"High (80%)","financials":{"value":"$7500 60 hours ($125 per hour, including travel)"},"nextAction":"Await next steps","internalNotes":"High probability due to 10-year relationship, but client can be difficult.","contacts":[{"name":"Kam Varner","role":"Mayor-Elect","email":"kvarner@mcdonoughga.org","notes":"Sent email January 14th, await next steps."},{"name":"Christy L. Taylor","role":"City Clerk","email":"ctaylor@mcdonoughga.org"}]},{"title":"Cambodia Science and Technology Centre","client":"MoEYS / ADB","status":"Interviewed / Pending Decision","probability":"Medium-High (60%)","financials":{"value":"$90,000"},"nextAction":"Await decision (expected Jan)","contacts":[{"name":"Tim Sandan","role":"Procurement","email":"timsandan@gmail.com","notes":"Sent follow up January 14th"},{"name":"Daavid Vaananen","role":"Recruiter","email":"daavid.vaananen@pm.me","notes":"Sent email wishing Happy New Year"}]},{"title":"Hawaiâ€˜i State Archives Revenue Study","client":"Architects Hawaii Ltd.","status":"Proposal Submitted / Pending Decision","probability":"Medium (40%)","financials":{"value":"$97,500"},"nextAction":"Await next steps","contacts":[{"name":"Katie Stephens","role":"AHL Contact","email":"kstephens@ahl.design","notes":"Happy New Year email sent January 14th 2026"},{"name":"Michele F. Pacifico","role":"Consultant","email":"martinpacifico@comcast.net"}]},{"title":"Juneteenth Home Initiative","client":"Galveston Historical Foundation","status":"SoQ Submitted / Pending Decision","probability":"Medium-Low (30%)","financials":{"value":"110k - 130k"},"nextAction":"Await SoQ review (mid-Jan)","contacts":[{"name":"Will Wright","role":"Chief Creative Officer","email":"will.wright@galvestonhistory.org","notes":"Sent Happy New Year and follow up email January 14, 2026"},{"name":"W. Dwayne Jones","role":"Exec Director","email":"dwayne.jones@galvestonhistory.org"},{"name":"Denise Alexander","role":"","email":"denise.alexander@galvestonhistory.org","notes":""}]},{"title":"Historic New Orleans Collection","client":"The Historic New Orleans Collection (HNOC)","status":"Proposal Submitted / Pending Decision","probability":"Low-Medium (25%)","financials":{"value":"$95,000"},"nextAction":"Submit Proposal by Feb 20","contacts":[{"name":"Michael Cohn","role":"COO/CFO","email":"michael.cohn@hnoc.org","notes":"Phone call January 12th 2026, Sent revised proposal January 13th 2026. Contact February 1st 2026"},{"name":"Paige Nulty","role":"Admin Assistant","email":"paige.nulty@hnoc.org"}]},{"title":"Cranbrook Institute of Science","client":"Cranbrook","status":"Declined / No Response","probability":"Zero","financials":{"value":"96,200"},"nextAction":"Add to email list","contacts":[{"name":"Lucy Hale","role":"Director","email":"LHale@cranbrook.edu","notes":"Sent Happy New Year!, January 14th 2026"},{"name":"Missy Coulter","role":"","email":"purchasing@cranbrook.edu","notes":"November 13th sent proposal (7 days after mothers death), Nov 19, 2025 received rejection email, new director, overwhelmed,  "}]},{"title":"Boston Civic & Cultural Framework","client":"City of Boston","status":"Declined / Keep in Touch","probability":"Zero","financials":{"value":"250,000"},"nextAction":"None (Declined)","contacts":[{"name":"Raisa Saniat","role":"RFP Coordinator","email":"raisa.saniat@boston.gov","notes":"Send Happy New Year Friday January 16th "},{"name":"Samuel Fidler","role":"","email":"samuel.fidler@boston.gov","notes":""}]}],"network":[]};
                 saveData();
             }
             renderPipeline();
@@ -574,6 +659,39 @@
             const text = document.getElementById('saveText');
             status.classList.remove('saving');
             text.textContent = 'Auto-saved';
+        }
+
+        function showAlert(message, type = 'success') {
+            const alert = document.getElementById('alertBox');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 3000);
+        }
+
+        // Import backup
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm('This will replace all current data. Continue?')) {
+                        pipelineData = imported;
+                        saveData();
+                        renderPipeline();
+                        updateStats();
+                        showAlert('Backup imported successfully!', 'success');
+                    }
+                } catch (error) {
+                    showAlert('Error importing file. Please check the file format.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset file input
         }
 
         // Parse financial value
@@ -611,6 +729,22 @@
             if (status.includes('Proposal') || status.includes('SoQ')) return 'status-proposal';
             if (status.includes('Interviewed')) return 'status-interviewed';
             return 'status-declined';
+        }
+
+        // Email all contacts for a project
+        function emailAllContacts(index) {
+            const project = pipelineData.activePipeline[index];
+            const contacts = project.contacts || [];
+            const emails = contacts.filter(c => c.email).map(c => c.email);
+            
+            if (emails.length === 0) {
+                alert('No email addresses found for this project.');
+                return;
+            }
+
+            const subject = encodeURIComponent(project.title);
+            const mailtoLink = `mailto:${emails.join(',')}?subject=${subject}`;
+            window.location.href = mailtoLink;
         }
 
         // Update statistics
@@ -658,7 +792,7 @@
                         p.client,
                         p.nextAction,
                         p.internalNotes,
-                        ...(p.contacts || []).map(c => c.name + ' ' + c.role)
+                        ...(p.contacts || []).map(c => c.name + ' ' + c.role + ' ' + c.email)
                     ].join(' ').toLowerCase();
                     return searchableText.includes(term);
                 });
@@ -711,15 +845,32 @@
                                         ${contacts.map(c => `
                                             <div class="contact-item">
                                                 <div class="contact-name">${c.name}${c.role ? ' - ' + c.role : ''}</div>
-                                                ${c.email ? `<div>${c.email}</div>` : ''}
-                                                ${c.notes ? `<div style="margin-top: 5px; font-size: 12px; color: #718096;">${c.notes}</div>` : ''}
+                                                ${c.email ? `
+                                                    <a href="mailto:${c.email}" class="contact-email" onclick="event.stopPropagation()">
+                                                        <svg class="email-icon" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                                                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                                                        </svg>
+                                                        ${c.email}
+                                                    </a>
+                                                ` : ''}
+                                                ${c.notes ? `<div class="contact-notes">${c.notes}</div>` : ''}
                                             </div>
                                         `).join('')}
                                     </div>
                                 </div>
                             ` : ''}
                             
-                            <button class="edit-btn" onclick="event.stopPropagation(); openEditModal(${actualIndex})">Edit Project</button>
+                            <div class="action-buttons">
+                                <button class="btn-small btn-edit" onclick="event.stopPropagation(); openEditModal(${actualIndex})">
+                                    Edit Project
+                                </button>
+                                ${contacts.filter(c => c.email).length > 0 ? `
+                                    <button class="btn-small btn-email-all" onclick="event.stopPropagation(); emailAllContacts(${actualIndex})">
+                                        Email All Contacts
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
                     </div>
                 `;
@@ -733,7 +884,18 @@
         // Toggle expand/collapse
         function toggleExpand(index) {
             const items = document.querySelectorAll('.pipeline-item');
-            items[index].classList.toggle('expanded');
+            const allIndexes = [];
+            pipelineData.activePipeline.forEach((p, i) => {
+                if (currentFilter === 'all' || p.status === currentFilter) {
+                    if (!searchTerm || JSON.stringify(p).toLowerCase().includes(searchTerm.toLowerCase())) {
+                        allIndexes.push(i);
+                    }
+                }
+            });
+            const displayIndex = allIndexes.indexOf(index);
+            if (displayIndex !== -1 && items[displayIndex]) {
+                items[displayIndex].classList.toggle('expanded');
+            }
         }
 
         // Filter functions
