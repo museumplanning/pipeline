@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Museum Planning Pipeline v4</title>
+    <style>
+        :root { --bg: #f0f2f5; --card: #fff; --text: #333; --green: #27ae60; --blue: #3498db; --purple: #9b59b6; --orange: #e67e22; --gray: #95a5a6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
+        
+        /* Header */
+        .header { background: #2c3e50; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); flex-wrap: wrap; gap: 10px; }
+        .header h1 { margin: 0; font-size: 1.4rem; }
+        .header-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-save { background: var(--green); color: white; }
+        .btn-load { background: var(--orange); color: white; }
+        .btn-import { background: #3498db; color: white; }
+        
+        /* Auto-save indicator */
+        .save-status { 
+            background: rgba(255,255,255,0.1); 
+            padding: 8px 12px; 
+            border-radius: 5px; 
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .save-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+        .save-indicator.saving {
+            background: var(--orange);
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Archive Toggle */
+        .toggle-container { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 5px; }
+        .toggle-container label { color: white; font-size: 0.85rem; cursor: pointer; }
+        .toggle-switch { position: relative; width: 40px; height: 22px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .3s; border-radius: 22px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--green); }
+        input:checked + .toggle-slider:before { transform: translateX(18px); }
+        
+        /* Layout */
+        h2 { border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-top: 50px; color: #2c3e50; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+        
+        /* Cards */
+        .card { background: var(--card); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 5px solid #ccc; display: flex; flex-direction: column; gap: 10px; position: relative; }
+        .card.archived { opacity: 0.5; display: none; }
+        .card.archived.show-archived { display: flex; }
+        
+        /* Archive Button */
+        .archive-btn { position: absolute; top: 10px; right: 10px; background: none; border: 1px solid #ddd; color: var(--gray); cursor: pointer; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; transition: all 0.2s; }
+        .archive-btn:hover { background: #f5f5f5; border-color: #bbb; }
+        .card.archived .archive-btn { background: var(--green); color: white; border-color: var(--green); }
+        
+        /* Colors */
+        .prob-High { border-top-color: var(--green); background: #f9fff9; }
+        .prob-Medium-High { border-top-color: #2ecc71; }
+        .prob-Medium { border-top-color: #f1c40f; }
+        .prob-Medium-Low { border-top-color: #e67e22; }
+        .prob-Low { border-top-color: #e74c3c; }
+        .prob-Zero { border-top-color: #95a5a6; }
+        .type-Professional { border-top-color: var(--blue); }
+        .type-Personal { border-top-color: var(--purple); }
+
+        /* Inputs */
+        label { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; color: #95a5a6; margin-bottom: -5px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box; font-family: inherit; }
+        input:focus, textarea:focus, select:focus { border-color: var(--blue); outline: none; background: #fff; }
+        
+        input.title { font-size: 1.1rem; font-weight: bold; color: #2c3e50; border: none; background: transparent; padding: 0; margin-bottom: 5px; padding-right: 80px; }
+        input.title:focus { background: #fff; border: 1px solid var(--blue); padding: 5px; }
+        
+        .money { color: var(--green); font-weight: bold; }
+        .action { background: #fff8e1; border: 1px solid #ffe082; color: #b7791f; font-weight: 600; }
+        
+        /* Contacts */
+        .contacts { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; font-size: 0.9em; color: #555; }
+        .contact-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #f9f9f9; padding: 8px 10px; border-radius: 4px; }
+        .contact-info { flex: 1; }
+        .contact-info input { 
+            border: 1px solid transparent; 
+            background: transparent;
+            padding: 2px 4px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .contact-info input:hover {
+            background: rgba(255,255,255,0.5);
+            border-color: #e0e0e0;
+        }
+        .contact-info input:focus {
+            background: white;
+            border-color: var(--blue);
+            outline: none;
+        }
+        .contact-name { font-weight: 600; color: #333; }
+        .contact-role { font-size: 0.85em; color: #777; }
+        
+        /* Email Button - Gmail Style */
+        .email-btn { 
+            background: #ea4335; 
+            border: none; 
+            cursor: pointer; 
+            padding: 6px 12px; 
+            border-radius: 4px; 
+            font-size: 0.8em; 
+            text-decoration: none; 
+            color: white; 
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .email-btn:hover { background: #c5221f; }
+        .no-email { color: #ccc; font-size: 0.8em; font-style: italic; }
+        
+        /* Remove Contact Button */
+        .contact-actions { display: flex; align-items: center; gap: 4px; }
+        .remove-btn { 
+            background: none; 
+            border: 1px solid #ddd; 
+            color: #999; 
+            cursor: pointer; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-size: 0.7em;
+            transition: all 0.2s;
+        }
+        .remove-btn:hover { background: #fee; border-color: #e74c3c; color: #e74c3c; }
+        
+        /* Move Contact Buttons */
+        .move-btn {
+            background: none;
+            border: 1px solid #ddd;
+            color: #999;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+            transition: all 0.2s;
+        }
+        .move-btn:hover:not(:disabled) { background: #eef; border-color: var(--blue); color: var(--blue); }
+        .move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        /* Add Contact Button */
+        .add-contact-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f9f9f9;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            color: #666;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .add-contact-btn:hover { background: #eef; border-color: var(--blue); color: var(--blue); }
+        
+        /* Add Project Button */
+        .add-project-btn {
+            padding: 8px 16px;
+            background: var(--blue);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .add-project-btn:hover { background: #2980b9; }
+        
+        /* Contact Notes */
+        .contact-email-input { margin: 4px 0; }
+        .contact-email-input input { font-size: 0.85em; padding: 6px; background: #f5f5f5; }
+        .contact-email-input input:focus { background: #fff; }
+        .contact-notes { margin-top: 4px; }
+        .contact-notes textarea { 
+            font-size: 0.85em; 
+            padding: 6px; 
+            min-height: 40px; 
+            background: #fffef5; 
+            border-color: #e8e5d0;
+        }
+        .contact-notes textarea:focus { background: #fff; }
+        .contact-notes textarea::placeholder { color: #bbb; }
+        
+        /* Network Email Button */
+        .network-email-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            background: #ea4335;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .network-email-btn:hover { background: #c5221f; }
+        
+        /* Stats Bar */
+        .stats { background: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 30px; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .stat { text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: bold; color: #2c3e50; }
+        .stat-label { font-size: 0.75rem; color: #7f8c8d; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏛️ Museum Planning Pipeline</h1>
+        <div class="header-controls">
+            <div class="save-status">
+                <div class="save-indicator" id="saveIndicator"></div>
+                <span id="saveText">Auto-saved</span>
+            </div>
+            <div class="toggle-container">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="showArchived" onchange="toggleArchived()">
+                    <span class="toggle-slider"></span>
+                </label>
+                <label for="showArchived">Show Archived</label>
+            </div>
+            <input type="file" id="fileInput" style="display:none" onchange="loadFile(this)" accept=".json">
+            <button class="btn btn-import" onclick="document.getElementById('fileInput').click()">📥 Import Backup</button>
+            <button class="btn btn-save" onclick="saveFile()">💾 Download Backup</button>
+        </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div id="app">
+        <div style="text-align:center; padding: 50px; color: #7f8c8d; border: 2px dashed #ccc; border-radius: 10px;">
+            <h3>Welcome! Your pipeline is ready.</h3>
+            <p>Your data auto-saves to your browser. Click <strong>"Import Backup"</strong> if you have a backup file to restore.</p>
+            <button class="add-project-btn" onclick="addProject()" style="margin-top: 20px; font-size: 1em; padding: 12px 24px;">+ Add Your First Project</button>
+        </div>
+    </div>
+
+    <script>
+        let db = {};
+        let saveTimeout = null;
+
+        // Auto-save to localStorage
+        function autoSave() {
+            clearTimeout(saveTimeout);
+            showSaving();
+            saveTimeout = setTimeout(() => {
+                try {
+                    localStorage.setItem('museumPipeline', JSON.stringify(db));
+                    showSaved();
+                } catch (e) {
+                    console.error('Auto-save failed:', e);
+                }
+            }, 500);
+        }
+
+        function showSaving() {
+            const indicator = document.getElementById('saveIndicator');
+            const text = document.getElementById('saveText');
+            indicator.classList.add('saving');
+            text.textContent = 'Saving...';
+        }
+
+        function showSaved() {
+            const indicator = document.getElementById('saveIndicator');
+            const text = document.getElementById('saveText');
+            indicator.classList.remove('saving');
+            text.textContent = 'Auto-saved';
+        }
+
+        // Load from localStorage on startup
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem('museumPipeline');
+                if (saved) {
+                    db = JSON.parse(saved);
+                    render();
+                    return true;
+                }
+            } catch (e) {
+                console.error('Failed to load from storage:', e);
+            }
+            return false;
+        }
+
+        function gmailComposeUrl(email, subject = '') {
+            const subjectParam = subject ? `&su=${encodeURIComponent(subject)}` : '';
+            return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}${subjectParam}`;
+        }
+
+        function toggleArchived() {
+            const show = document.getElementById('showArchived').checked;
+            document.querySelectorAll('.card.archived').forEach(card => {
+                card.classList.toggle('show-archived', show);
+            });
+            updateStats();
+        }
+
+        function updateStats() {
+            const statsEl = document.getElementById('stats');
+            if (!db.activePipeline) { statsEl.innerHTML = ''; return; }
+            
+            const showArchived = document.getElementById('showArchived').checked;
+            const active = db.activePipeline.filter(p => 
+                !p.archived && 
+                p.probability !== 'Zero' && 
+                !(p.status && p.status.toLowerCase().includes('declined'))
+            );
+            const archived = db.activePipeline.filter(p => 
+                p.archived || 
+                p.probability === 'Zero' || 
+                (p.status && p.status.toLowerCase().includes('declined'))
+            );
+            
+            let totalValue = 0;
+            active.forEach(p => {
+                const val = p.financials?.value;
+                if (typeof val === 'number') totalValue += val;
+                else if (typeof val === 'string') {
+                    const cleaned = val.replace(/,/g, '');
+                    const match = cleaned.match(/(\d+)/);
+                    if (match) {
+                        let num = parseInt(match[1]);
+                        if (num < 1000 && cleaned.toLowerCase().includes('k')) num *= 1000;
+                        totalValue += num;
+                    }
+                }
+            });
+            
+            statsEl.innerHTML = `
+                <div class="stat"><div class="stat-value">${active.length}</div><div class="stat-label">Active</div></div>
+                <div class="stat"><div class="stat-value">${archived.length}</div><div class="stat-label">Archived</div></div>
+                <div class="stat"><div class="stat-value">$${(totalValue/1000).toFixed(0)}k</div><div class="stat-label">Pipeline Value</div></div>
+            `;
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+
+            // 1. Active Pipeline
+            if (db.activePipeline) {
+                const headerDiv = document.createElement('div');
+                headerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 50px;';
+                headerDiv.innerHTML = `
+                    <h2 style="margin: 0; border: none;">🚀 Opportunities</h2>
+                    <button class="add-project-btn" onclick="addProject()">+ Add Project</button>
+                `;
+                app.appendChild(headerDiv);
+                
+                const activeGrid = document.createElement('div');
+                activeGrid.className = 'grid';
+
+                db.activePipeline.forEach((p, i) => {
+                    const card = document.createElement('div');
+                    const probClass = p.probability ? p.probability.split(' ')[0] : 'Low';
+                    card.className = `card prob-${probClass}${p.archived ? ' archived' : ''}`;
+                    
+                    let contactsHtml = (p.contacts || []).map((c, ci) => {
+                        let emailAction = c.email 
+                            ? `<a href="${gmailComposeUrl(c.email, 'Re: ' + p.title)}" target="_blank" rel="noopener noreferrer" class="email-btn">✉️ Gmail</a>` 
+                            : `<span class="no-email">Add email ↓</span>`;
+                        
+                        const isFirst = ci === 0;
+                        const isLast = ci === p.contacts.length - 1;
+                            
+                        return `<div class="contact-row">
+                                    <div class="contact-info">
+                                        <input type="text" placeholder="Contact name" value="${c.name || ''}" 
+                                            onchange="updateContactField('activePipeline', ${i}, ${ci}, 'name', this.value)"
+                                            style="font-weight: 600; color: #333; border: none; background: transparent; padding: 2px; width: 100%;">
+                                        <input type="text" placeholder="Role/Title" value="${c.role || ''}" 
+                                            onchange="updateContactField('activePipeline', ${i}, ${ci}, 'role', this.value)"
+                                            style="font-size: 0.85em; color: #777; border: none; background: transparent; padding: 2px; width: 100%;">
+                                    </div>
+                                    <div class="contact-actions">
+                                        <button class="move-btn" onclick="moveContact('activePipeline', ${i}, ${ci}, -1)" ${isFirst ? 'disabled' : ''} title="Move up">↑</button>
+                                        <button class="move-btn" onclick="moveContact('activePipeline', ${i}, ${ci}, 1)" ${isLast ? 'disabled' : ''} title="Move down">↓</button>
+                                        <button class="remove-btn" onclick="removeContact('activePipeline', ${i}, ${ci})" title="Remove contact">✕</button>
+                                        ${emailAction}
+                                    </div>
+                                </div>
+                                <div class="contact-email-input">
+                                    <input type="email" placeholder="email@example.com" value="${c.email || ''}" 
+                                        onchange="updateContactField('activePipeline', ${i}, ${ci}, 'email', this.value)">
+                                </div>
+                                <div class="contact-notes">
+                                    <textarea placeholder="Notes: e.g., Emailed Jan 12, follow up 2 weeks..." 
+                                        onchange="updateContactField('activePipeline', ${i}, ${ci}, 'notes', this.value)">${c.notes || ''}</textarea>
+                                </div>`;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <button class="archive-btn" onclick="toggleArchive('activePipeline', ${i})">${p.archived ? '↩️ Restore' : '📦 Archive'}</button>
+                        <input class="title" value="${p.title}" onchange="update('activePipeline', ${i}, 'title', this.value)">
+                        <label>Client</label><input value="${p.client || ''}" onchange="update('activePipeline', ${i}, 'client', this.value)">
+                        <label>Status</label>
+                        <select onchange="update('activePipeline', ${i}, 'status', this.value)">
+                            <option value="${p.status}">${p.status}</option>
+                            <option value="Lead / Follow-up Required">Lead / Follow-up Required</option>
+                            <option value="Interviewed / Pending Decision">Interviewed / Pending Decision</option>
+                            <option value="Proposal Submitted / Pending Decision">Proposal Submitted</option>
+                            <option value="SoQ Submitted / Pending Decision">SoQ Submitted</option>
+                            <option value="Drafting Proposal">Drafting Proposal</option>
+                            <option value="Contracted">Contracted</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Declined / No Response">Declined / No Response</option>
+                        </select>
+                        <label>Probability</label>
+                        <select onchange="update('activePipeline', ${i}, 'probability', this.value)">
+                            <option value="${p.probability}">${p.probability}</option>
+                            <option value="High (80%)">High (80%)</option>
+                            <option value="Medium-High (60%)">Medium-High (60%)</option>
+                            <option value="Medium (40%)">Medium (40%)</option>
+                            <option value="Medium-Low (30%)">Medium-Low (30%)</option>
+                            <option value="Low (5%)">Low (5%)</option>
+                            <option value="Zero">Zero</option>
+                        </select>
+                        <label>Value ($)</label><input class="money" value="${p.financials?.value || ''}" onchange="updateFinancial(${i}, this.value)">
+                        <label>Next Action</label><input class="action" value="${p.nextAction || ''}" onchange="update('activePipeline', ${i}, 'nextAction', this.value)">
+                        <div class="contacts">
+                            ${contactsHtml || '<em style="color:#aaa">No contacts</em>'}
+                            <button class="add-contact-btn" onclick="addContact('activePipeline', ${i})">+ Add Contact</button>
+                        </div>
+                    `;
+                    activeGrid.appendChild(card);
+                });
+                app.appendChild(activeGrid);
+            }
+
+            // 2. Network Sections
+            if (db.network) {
+                app.innerHTML += `<h2>💼 Professional Network</h2>`;
+                const profGrid = document.createElement('div');
+                profGrid.className = 'grid';
+                
+                app.innerHTML += `<h2>💜 Personal Friends & Family</h2>`;
+                const persGrid = document.createElement('div');
+                persGrid.className = 'grid';
+
+                db.network.forEach((n, i) => {
+                    const card = document.createElement('div');
+                    const isPersonal = (n.role && (n.role.includes("Personal") || n.role.includes("Friend") || n.role.includes("Cousin") || n.role.includes("Neighbor")));
+                    card.className = `card type-${isPersonal ? 'Personal' : 'Professional'}${n.archived ? ' archived' : ''}`;
+
+                    let emailAction = n.email 
+                        ? `<a href="${gmailComposeUrl(n.email)}" target="_blank" rel="noopener noreferrer" class="network-email-btn">✉️ Open Gmail</a>` 
+                        : ``;
+
+                    card.innerHTML = `
+                        <button class="archive-btn" onclick="toggleArchive('network', ${i})">${n.archived ? '↩️ Restore' : '📦 Archive'}</button>
+                        <input class="title" value="${n.name}" onchange="update('network', ${i}, 'name', this.value)">
+                        <label>Organization</label><input value="${n.org || ''}" onchange="update('network', ${i}, 'org', this.value)">
+                        <label>Role</label><input value="${n.role || ''}" onchange="update('network', ${i}, 'role', this.value)">
+                        <label>Email</label><input value="${n.email || ''}" placeholder="Add email..." onchange="update('network', ${i}, 'email', this.value)">
+                        <label>Notes</label><textarea placeholder="e.g., Emailed Jan 12, follow up in 2 weeks..." onchange="update('network', ${i}, 'notes', this.value)">${n.notes || ''}</textarea>
+                        ${emailAction}
+                    `;
+
+                    if (isPersonal) persGrid.appendChild(card);
+                    else profGrid.appendChild(card);
+                });
+
+                const headers = app.querySelectorAll('h2');
+                if (headers[1]) headers[1].after(profGrid);
+                if (headers[2]) headers[2].after(persGrid);
+            }
+
+            updateStats();
+        }
+
+        // --- LOGIC ---
+        function update(listName, index, field, value) {
+            db[listName][index][field] = value;
+            if(field === 'probability' || field === 'role' || field === 'email') render(); 
+            autoSave();
+        }
+
+        function updateFinancial(index, value) {
+            if (!db.activePipeline[index].financials) db.activePipeline[index].financials = {};
+            db.activePipeline[index].financials.value = value;
+            autoSave();
+        }
+
+        function updateContactField(listName, projectIndex, contactIndex, field, value) {
+            if (db[listName][projectIndex].contacts && db[listName][projectIndex].contacts[contactIndex]) {
+                db[listName][projectIndex].contacts[contactIndex][field] = value;
+                if (field === 'email') render();
+                autoSave();
+            }
+        }
+
+        function removeContact(listName, projectIndex, contactIndex) {
+            const contact = db[listName][projectIndex].contacts[contactIndex];
+            if (confirm(`Remove ${contact.name} from this project?`)) {
+                db[listName][projectIndex].contacts.splice(contactIndex, 1);
+                render();
+                autoSave();
+            }
+        }
+
+        function moveContact(listName, projectIndex, contactIndex, direction) {
+            const contacts = db[listName][projectIndex].contacts;
+            const newIndex = contactIndex + direction;
+            if (newIndex < 0 || newIndex >= contacts.length) return;
+            
+            const temp = contacts[contactIndex];
+            contacts[contactIndex] = contacts[newIndex];
+            contacts[newIndex] = temp;
+            render();
+            autoSave();
+        }
+
+        function addContact(listName, projectIndex) {
+            const name = prompt('Contact name:');
+            if (name && name.trim()) {
+                if (!db[listName][projectIndex].contacts) {
+                    db[listName][projectIndex].contacts = [];
+                }
+                db[listName][projectIndex].contacts.push({
+                    name: name.trim(),
+                    role: '',
+                    email: '',
+                    notes: ''
+                });
+                render();
+                autoSave();
+            }
+        }
+
+        function addProject() {
+            const title = prompt('Project title:');
+            if (title && title.trim()) {
+                if (!db.activePipeline) {
+                    db.activePipeline = [];
+                }
+                db.activePipeline.unshift({
+                    title: title.trim(),
+                    client: '',
+                    status: 'Lead / Follow-up Required',
+                    probability: 'Medium (40%)',
+                    financials: { value: '' },
+                    nextAction: '',
+                    contacts: []
+                });
+                render();
+                autoSave();
+            }
+        }
+
+        function toggleArchive(listName, index) {
+            db[listName][index].archived = !db[listName][index].archived;
+            render();
+            autoSave();
+        }
+
+        function saveFile() {
+            if (!db.activePipeline && !db.network) { 
+                alert("No data to save!"); 
+                return; 
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            const date = new Date().toISOString().split('T')[0];
+            a.download = `museum-pipeline-backup-${date}.json`;
+            a.click();
+        }
+
+        function loadFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm('Import this backup? This will replace your current data.')) {
+                        db = imported;
+                        render();
+                        autoSave();
+                        alert('Backup imported successfully!');
+                    }
+                } catch(err) { 
+                    alert("Error loading file: " + err.message); 
+                }
+            };
+            reader.readAsText(file);
+            input.value = ''; // Reset file input
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!loadFromStorage()) {
+                // If no saved data, load the most recent backup data with all January 14th updates
+                db = {"activePipeline":[{"title":"Culture Planning","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":""},"nextAction":"","contacts":[]},{"title":"Museums 101 2nd edition","client":"","status":"Lead / Follow-up Required","probability":"Medium (40%)","financials":{"value":"$1000 per year"},"nextAction":"Email, Publisher, and Keith ","contacts":[{"name":"Publisher","role":"","email":"","notes":""},{"name":"Keith","role":"","email":"","notes":""},{"name":"Photo Editor","role":"","email":"","notes":""}]},{"title":"City of McDonough Museum (Next Steps)","client":"City of McDonough","status":"Lead / Follow-up Required","probability":"High (80%)","financials":{"value":"$7500 60 hours ($125 per hour, including travel)"},"nextAction":"Await next steps","internalNotes":"High probability due to 10-year relationship, but client can be difficult.","contacts":[{"name":"Kam Varner","role":"Mayor-Elect","email":"kvarner@mcdonoughga.org","notes":"Sent email January 14th, await next steps."},{"name":"Christy L. Taylor","role":"City Clerk","email":"ctaylor@mcdonoughga.org"}]},{"title":"Cambodia Science and Technology Centre","client":"MoEYS / ADB","status":"Interviewed / Pending Decision","probability":"Medium-High (60%)","financials":{"value":"$90,000"},"nextAction":"Await decision (expected Jan)","contacts":[{"name":"Tim Sandan","role":"Procurement","email":"timsandan@gmail.com","notes":"Sent follow up January 14th"},{"name":"Daavid Vaananen","role":"Recruiter","email":"daavid.vaananen@pm.me","notes":"Sent email wishing Happy New Year"}]},{"title":"Hawaiâ€˜i State Archives Revenue Study","client":"Architects Hawaii Ltd.","status":"Proposal Submitted / Pending Decision","probability":"Medium (40%)","financials":{"value":"$97,500"},"nextAction":"Await next steps","contacts":[{"name":"Katie Stephens","role":"AHL Contact","email":"kstephens@ahl.design","notes":"Happy New Year email sent January 14th 2026"},{"name":"Michele F. Pacifico","role":"Consultant","email":"martinpacifico@comcast.net"}]},{"title":"Juneteenth Home Initiative","client":"Galveston Historical Foundation","status":"SoQ Submitted / Pending Decision","probability":"Medium-Low (30%)","financials":{"value":"110k - 130k"},"nextAction":"Await SoQ review (mid-Jan)","contacts":[{"name":"Will Wright","role":"Chief Creative Officer","email":"will.wright@galvestonhistory.org","notes":"Sent Happy New Year and follow up email January 14, 2026"},{"name":"W. Dwayne Jones","role":"Exec Director","email":"dwayne.jones@galvestonhistory.org"},{"name":"Denise Alexander","role":"","email":"denise.alexander@galvestonhistory.org","notes":""}]},{"title":"Historic New Orleans Collection","client":"The Historic New Orleans Collection (HNOC)","status":"Proposal Submitted / Pending Decision","probability":"Low-Medium (25%)","financials":{"value":"$95,000"},"nextAction":"Submit Proposal by Feb 20","contacts":[{"name":"Michael Cohn","role":"COO/CFO","email":"michael.cohn@hnoc.org","notes":"Phone call January 12th 2026, Sent revised proposal January 13th 2026. Contact February 1st 2026"},{"name":"Paige Nulty","role":"Admin Assistant","email":"paige.nulty@hnoc.org"}]},{"title":"Cranbrook Institute of Science","client":"Cranbrook","status":"Declined / No Response","probability":"Zero","financials":{"value":"96,200"},"nextAction":"Add to email list","contacts":[{"name":"Lucy Hale","role":"Director","email":"LHale@cranbrook.edu","notes":"Sent Happy New Year!, January 14th 2026"},{"name":"Missy Coulter","role":"","email":"purchasing@cranbrook.edu","notes":"November 13th sent proposal (7 days after mothers death), Nov 19, 2025 received rejection email, new director, overwhelmed,  "}]},{"title":"Boston Civic & Cultural Framework","client":"City of Boston","status":"Declined / Keep in Touch","probability":"Zero","financials":{"value":"250,000"},"nextAction":"None (Declined)","contacts":[{"name":"Raisa Saniat","role":"RFP Coordinator","email":"raisa.saniat@boston.gov","notes":"Send Happy New Year Friday January 16th "},{"name":"Samuel Fidler","role":"","email":"samuel.fidler@boston.gov","notes":""}]}],"network":[{"name":"Jason R. Cryan","org":"Natural History Museum of Utah","role":"Friend/Mentor"},{"name":"Keith Dickerson","org":"City of Clarkesville","role":"Reference"},{"name":"Gwen McCausland","org":"SD Ag Heritage Museum","role":"Reference"},{"name":"Jon-Paul C. Dyson","org":"The Strong Museum","role":"Reference"},{"name":"Linda Marston-Reid","org":"Dutchess County Arts","role":"Reference"},{"name":"William Heyborne","org":"Southern Utah Univ","role":"Reference"},{"name":"Elliott Cheu","org":"Univ of Arizona","role":"Past Client"},{"name":"Tara MacDougall","org":"Discovery Center Murfree Spring","role":"Past Client"},{"name":"Ellen Censky","org":"Carnegie Museums","role":"Network"},{"name":"Laurie Hamilton","org":"Neighbor","role":"Personal"},{"name":"Jamie Wallack","org":"Cousin","role":"Personal"},{"name":"Mark Redberg","org":"Friend","role":"Personal"},{"name":"Michael Kondo","org":"Friend","role":"Personal"},{"name":"Michael Goldman","org":"Friend","role":"Personal"},{"name":"Gregory Going","org":"Friend","role":"Personal"},{"name":"George Smith","org":"Friend","role":"Personal"},{"name":"Laura Yanks","org":"Cousin","role":"Personal"},{"name":"Janie Botwinick","org":"Cousin","role":"Personal"},{"name":"Nobi-san","org":"Friend","role":"Personal"},{"name":"Piotr","org":"Friend (Poland)","role":"Personal"},{"name":"Bonnie","org":"Southern Utah Univ","role":"Friend"}]};
+                render();
+                autoSave(); // Save the initial data
+            }
+        });
+    </script>
+</body>
+</html>
